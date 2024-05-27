@@ -12,8 +12,10 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # i
 import csv #helping convert json to csv
 from io import StringIO  # in order for merge_csv_rows_by_diagnosis function 
 from collections import defaultdict # in order for merge_csv_rows_by_diagnosis function 
-import openai # in order to use openai asistant 
+from openai import OpenAI # in order to use openai asistant 
 import time  # Import the time module
+
+
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -29,14 +31,15 @@ password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
 
 # Set your OpenAI API key
-openai.api_key = os.environ.get('openai_key') 
+#openai.api_key = os.environ.get('openai_key') 
 
 
 #Asistant request 
 def assistant_request(csv_string, assistant_id, vector_store_id):
     # Read CSV string into DataFrame
     #csv_data = csv.DictReader(io.StringIO(csv_string))
-
+    #openai 
+    client  = OpenAI()
     # For demonstration, let's assume we want to summarize the data
     # Convert DataFrame to a string in a readable format
     #data_summary = csv_data.describe().to_string()
@@ -44,20 +47,18 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Create the request content for the assistant
     content = f"Please summarize the following data:\n\n{data_summary}"
-  # Create a new thread
-    thread = openai.Thread.create(
-        assistant_id=assistant_id
-    )
+   # Create a new thread
+    thread = openai.Client.beta.threads.create()
 
     # Add a message to the thread
-    openai.Message.create(
+    client.beta.threads.messages.create(
         thread_id=thread['id'],
         role="user",
         content=content
     )
 
     # Run the assistant
-    run = openai.Run.create(
+    run = client.beta.threads.runs.create(
         thread_id=thread['id'],
         assistant_id=assistant_id,
         tools=[{"type": "file_search"}],
@@ -67,20 +68,19 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     # Wait for the run to complete
     while run['status'] in ['queued', 'in_progress']:
         time.sleep(1)  # Pause for a second before checking the status again
-        run = openai.Run.retrieve(
+        run = client.beta.threads.runs.retrieve(
             thread_id=thread['id'],
             run_id=run['id']
         )
 
     # Get the response text from the assistant
-    messages = openai.Message.list(
+    messages = client.beta.threads.messages.list(
         thread_id=thread['id'],
         order="asc"
     )
 
     assistant_response = messages['data'][-1]['content']
     return assistant_response
-
 
 
 #get content from storage table 
