@@ -66,11 +66,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     run = client.beta.threads.runs.create(
         thread_id=thread.id,
         assistant_id=assistant_id,
-        tools=[{"type": "file_search"}],
-        tool_resources= {
-         "file_search": {
-         "vector_store_ids": [vector_store_id]}
-        }
+        tools=[{"type": "file_search"}]
     )
 
     # Wait for the run to complete
@@ -113,8 +109,9 @@ def get_content_Csv(table_name, partition_key, row_key):
         entity = table_client.get_entity(partition_key=partition_key, row_key=row_key)
 
         # Return the value of 'contentAnalysisCsv' field
-        encoded_content_csv = entity.get('contentCsv')
+        encoded_content_csv = entity.get('contentCsvConsolidation')
         retrieved_csv = encoded_content_csv.replace('\\n', '\n') 
+        logging.info(f"contentCsvConsolidation: {retrieved_csv}")
         return retrieved_csv
     except Exception as e:
         print(f"An error occurred: {e}")
