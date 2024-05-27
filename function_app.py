@@ -14,7 +14,7 @@ from io import StringIO  # in order for merge_csv_rows_by_diagnosis function
 from collections import defaultdict # in order for merge_csv_rows_by_diagnosis function 
 from openai import OpenAI # in order to use openai asistant 
 import time  # Import the time module
-
+import openai
 
 
 # Azure Blob Storage connection string
@@ -22,6 +22,9 @@ connection_string_blob = os.environ.get('BlobStorageConnString')
 
 #Azure service bus connection string 
 connection_string_servicebus = os.environ.get('servicebusConnectionString')
+
+#openai key
+openai.api_key = os.environ.get('openai_key')
 
 # Define connection details
 server = 'medicalanalysis-sqlserver.database.windows.net'
