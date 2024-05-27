@@ -48,7 +48,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     # Create the request content for the assistant
     content = f"Please summarize the following data:\n\n{data_summary}"
    # Create a new thread
-    thread = openai.Client.beta.threads.create()
+    thread = client.beta.threads.create()
 
     # Add a message to the thread
     client.beta.threads.messages.create(
