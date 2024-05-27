@@ -51,7 +51,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     data_summary = StringIO(csv_string)
 
     # Create the request content for the assistant
-    content = f"Please summarize the following data:\n\n{data_summary}"
+    content = data_summary
 
 
     # Run the assistant with create_and_run
