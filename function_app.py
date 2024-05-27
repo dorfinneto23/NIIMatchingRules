@@ -24,7 +24,8 @@ connection_string_blob = os.environ.get('BlobStorageConnString')
 connection_string_servicebus = os.environ.get('servicebusConnectionString')
 
 #openai key
-openai.api_key = os.environ.get('openai_key')
+openai_key = os.environ.get('openai_key')
+
 
 # Define connection details
 server = 'medicalanalysis-sqlserver.database.windows.net'
@@ -42,7 +43,8 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     # Read CSV string into DataFrame
     #csv_data = csv.DictReader(io.StringIO(csv_string))
     #openai 
-    client  = OpenAI()
+    client  = OpenAI(api_key=openai_key)
+
     # For demonstration, let's assume we want to summarize the data
     # Convert DataFrame to a string in a readable format
     #data_summary = csv_data.describe().to_string()
