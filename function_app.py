@@ -63,7 +63,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     )
 
     # Run the assistant
-    run = client.beta.threads.runs.create(
+    run = client.beta.threads.create_and_run(
         thread_id=thread.id,
         assistant_id=assistant_id,
         tools=[{"type": "file_search"}],
