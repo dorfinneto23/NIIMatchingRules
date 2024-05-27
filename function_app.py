@@ -74,13 +74,13 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     while run.status in ['queued', 'in_progress']:
         time.sleep(1)  # Pause for a second before checking the status again
         run = client.beta.threads.runs.retrieve(
-            thread_id=run.thread.id,#added
+            thread_id=run.thread_id,#added
             run_id=run.id
         )
 
     # Get the response text from the assistant
     messages = client.beta.threads.messages.list(
-        thread_id=run.thread.id,
+        thread_id=run.thread_id,
         order="asc"
     )
 
