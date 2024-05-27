@@ -44,18 +44,20 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Create the request content for the assistant
     content = f"Please summarize the following data:\n\n{data_summary}"
- # Create a new thread
-    thread = openai.Client.beta.threads.create()
+  # Create a new thread
+    thread = openai.Thread.create(
+        assistant_id=assistant_id
+    )
 
     # Add a message to the thread
-    openai.Client.beta.threads.messages.create(
+    openai.Message.create(
         thread_id=thread['id'],
         role="user",
         content=content
     )
 
     # Run the assistant
-    run = openai.Client.beta.threads.runs.create(
+    run = openai.Run.create(
         thread_id=thread['id'],
         assistant_id=assistant_id,
         tools=[{"type": "file_search"}],
@@ -64,14 +66,14 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Wait for the run to complete
     while run['status'] in ['queued', 'in_progress']:
-        time.sleep(1)
-        run = openai.Client.beta.threads.runs.retrieve(
+        time.sleep(1)  # Pause for a second before checking the status again
+        run = openai.Run.retrieve(
             thread_id=thread['id'],
             run_id=run['id']
         )
 
     # Get the response text from the assistant
-    messages = openai.Client.beta.threads.messages.list(
+    messages = openai.Message.list(
         thread_id=thread['id'],
         order="asc"
     )
