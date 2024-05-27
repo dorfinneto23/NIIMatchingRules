@@ -13,6 +13,7 @@ import csv #helping convert json to csv
 from io import StringIO  # in order for merge_csv_rows_by_diagnosis function 
 from collections import defaultdict # in order for merge_csv_rows_by_diagnosis function 
 import openai # in order to use openai asistant 
+import time  # Import the time module
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -43,26 +44,39 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Create the request content for the assistant
     content = f"Please summarize the following data:\n\n{data_summary}"
+ # Create a new thread
+    thread = openai.Client.beta.threads.create()
 
-    # Send the request to OpenAI's assistant using the client.beta.threads.create_and_run method
-    run = openai.Client.beta.threads.create_and_run(
-        assistant_id=assistant_id,
-        tools=[{"type": "file_search"}],
-        tool_resources={
-            "file_search": {
-                "vector_store_ids": [vector_store_id]
-            }
-        },
-        thread={
-            "messages": [
-                {"role": "user", "content": content},
-            ]
-        }
+    # Add a message to the thread
+    openai.Client.beta.threads.messages.create(
+        thread_id=thread['id'],
+        role="user",
+        content=content
     )
 
-    # Get the response text from the assistant
-    assistant_response = run['messages'][-1]['content']
+    # Run the assistant
+    run = openai.Client.beta.threads.runs.create(
+        thread_id=thread['id'],
+        assistant_id=assistant_id,
+        tools=[{"type": "file_search"}],
+        tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}}
+    )
 
+    # Wait for the run to complete
+    while run['status'] in ['queued', 'in_progress']:
+        time.sleep(1)
+        run = openai.Client.beta.threads.runs.retrieve(
+            thread_id=thread['id'],
+            run_id=run['id']
+        )
+
+    # Get the response text from the assistant
+    messages = openai.Client.beta.threads.messages.list(
+        thread_id=thread['id'],
+        order="asc"
+    )
+
+    assistant_response = messages['data'][-1]['content']
     return assistant_response
 
 
