@@ -74,7 +74,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
     while run.status in ['queued', 'in_progress']:
         time.sleep(1)  # Pause for a second before checking the status again
         run = client.beta.threads.runs.retrieve(
-            thread_id=thread.id,
+            thread_id=run.thread.id,
             run_id=run.id
         )
 
