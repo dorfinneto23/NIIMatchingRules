@@ -80,7 +80,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Get the response text from the assistant
     messages = client.beta.threads.messages.list(
-        thread_id=thread.id,
+        thread_id=run.thread.id,
         order="asc"
     )
 
