@@ -83,7 +83,7 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
         order="asc"
     )
 
-    assistant_response = messages.data[-1]['content']
+    assistant_response = messages.data[-1].content
     return assistant_response
 
 
