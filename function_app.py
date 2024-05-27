@@ -107,7 +107,9 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     logging.info(f"Received messageesds: {message_data}")
     message_data_dict = json.loads(message_data)
     caseid = message_data_dict['caseid']
-    clinicalarea = message_data_dict['clinicalarea']
-    content_csv = get_content_Csv("ContentByClinicAreas", caseid, clinicalarea)
+    clinicArea = message_data_dict['clinicArea']
+    storageTable = message_data_dict['storageTable']
+    content_csv = get_content_Csv(storageTable, caseid, clinicArea)
+    logging.info(f"storageTable: {storageTable},caseid: {caseid},clinicArea: {clinicArea}")
     ass_result = assistant_request(content_csv, "asst_3nZCjLaXe06CvPR5L05gkGxk", "vs_cca6GF9kkzlu7XlHEg6yCYV5")
     logging.info(f"ass_result: {ass_result}")
