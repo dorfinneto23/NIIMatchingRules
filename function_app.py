@@ -12,7 +12,7 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # i
 import csv #helping convert json to csv
 from io import StringIO  # in order for merge_csv_rows_by_diagnosis function 
 from collections import defaultdict # in order for merge_csv_rows_by_diagnosis function 
-
+import openai # in order to use openai asistant 
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -26,6 +26,44 @@ database = 'medicalanalysis'
 username = os.environ.get('sql_username')
 password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
+
+# Set your OpenAI API key
+openai.api_key = os.environ.get('openai_key') 
+
+
+#Asistant request 
+def assistant_request(csv_string, assistant_id, vector_store_id):
+    # Read CSV string into DataFrame
+    csv_data = csv.DictReader(io.StringIO(csv_string))
+
+    # For demonstration, let's assume we want to summarize the data
+    # Convert DataFrame to a string in a readable format
+    data_summary = csv_data.describe().to_string()
+
+    # Create the request content for the assistant
+    content = f"Please summarize the following data:\n\n{data_summary}"
+
+    # Send the request to OpenAI's assistant using the client.beta.threads.create_and_run method
+    run = openai.Client.beta.threads.create_and_run(
+        assistant_id=assistant_id,
+        tools=[{"type": "file_search"}],
+        tool_resources={
+            "file_search": {
+                "vector_store_ids": [vector_store_id]
+            }
+        },
+        thread={
+            "messages": [
+                {"role": "user", "content": content},
+            ]
+        }
+    )
+
+    # Get the response text from the assistant
+    assistant_response = run['messages'][-1]['content']
+
+    return assistant_response
+
 
 
 #get content from storage table 
@@ -68,3 +106,8 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     message_data = azservicebus.get_body().decode('utf-8')
     logging.info(f"Received messageesds: {message_data}")
     message_data_dict = json.loads(message_data)
+    caseid = message_data_dict['caseid']
+    clinicalarea = message_data_dict['clinicalarea']
+    content_csv = get_content_Csv("ContentByClinicAreas", caseid, clinicalarea)
+    ass_result = assistant_request(content_csv, "asst_3nZCjLaXe06CvPR5L05gkGxk", "vs_cca6GF9kkzlu7XlHEg6yCYV5")
+    logging.info(f"ass_result: {ass_result}")
