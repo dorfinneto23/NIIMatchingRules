@@ -57,34 +57,34 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
     # Add a message to the thread
     client.beta.threads.messages.create(
-        thread_id=thread['id'],
+        thread_id=thread.id,
         role="user",
         content=content
     )
 
     # Run the assistant
     run = client.beta.threads.runs.create(
-        thread_id=thread['id'],
+        thread_id=thread.id,
         assistant_id=assistant_id,
         tools=[{"type": "file_search"}],
         tool_resources={"file_search": {"vector_store_ids": [vector_store_id]}}
     )
 
     # Wait for the run to complete
-    while run['status'] in ['queued', 'in_progress']:
+    while run.status in ['queued', 'in_progress']:
         time.sleep(1)  # Pause for a second before checking the status again
         run = client.beta.threads.runs.retrieve(
-            thread_id=thread['id'],
-            run_id=run['id']
+            thread_id=thread.id,
+            run_id=run.id
         )
 
     # Get the response text from the assistant
     messages = client.beta.threads.messages.list(
-        thread_id=thread['id'],
+        thread_id=thread.id,
         order="asc"
     )
 
-    assistant_response = messages['data'][-1]['content']
+    assistant_response = messages.data[-1]['content']
     return assistant_response
 
 
