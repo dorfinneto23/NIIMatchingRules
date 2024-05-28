@@ -34,57 +34,84 @@ username = os.environ.get('sql_username')
 password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
 
-# Set your OpenAI API key
-#openai.api_key = os.environ.get('openai_key') 
 
+# Update field on specific entity/ row in storage table 
+def update_entity_field(table_name, partition_key, row_key, field_name, new_value):
+
+    try:
+        # Create a TableServiceClient using the connection string
+        table_service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
+
+        # Get a TableClient
+        table_client = table_service_client.get_table_client(table_name)
+
+        # Retrieve the entity
+        entity = table_client.get_entity(partition_key, row_key)
+
+        # Update the field
+        entity[field_name] = new_value
+
+        # Update the entity in the table
+        table_client.update_entity(entity, mode=UpdateMode.REPLACE)
+        logging.info(f"update_entity_field:Entity updated successfully.")
+
+    except ResourceNotFoundError:
+        logging.info(f"The entity with PartitionKey '{partition_key}' and RowKey '{row_key}' was not found.")
+    except Exception as e:
+        logging.info(f"An error occurred: {e}")
 
 #Asistant request 
 def assistant_request(csv_string, assistant_id, vector_store_id):
-    #openai 
-    client  = OpenAI(api_key=openai_key)
+    try:
+        #openai 
+        client  = OpenAI(api_key=openai_key)
 
-    content = csv_string
+        content = csv_string
 
-    # Run the assistant with create_and_run
-    run = client.beta.threads.create_and_run(
-        assistant_id=assistant_id,
-        tools=[{"type": "file_search"}],
-        tool_resources={
-            "file_search": {
-                "vector_store_ids": [vector_store_id]
+        # Run the assistant with create_and_run
+        run = client.beta.threads.create_and_run(
+            assistant_id=assistant_id,
+            tools=[{"type": "file_search"}],
+            tool_resources={
+                "file_search": {
+                    "vector_store_ids": [vector_store_id]
+                }
+            },
+            thread={
+                "messages": [
+                    {"role": "user", "content": content},
+                ]
             }
-        },
-        thread={
-            "messages": [
-                {"role": "user", "content": content},
-            ]
-        }
-    )
-
-    # Wait for the run to complete
-    while run.status in ['queued', 'in_progress']:
-        time.sleep(1)  # Pause for a second before checking the status again
-        run = client.beta.threads.runs.retrieve(
-            thread_id=run.thread_id,#added
-            run_id=run.id
         )
 
-    # Get the response text from the assistant
-    messages = client.beta.threads.messages.list(
-        thread_id=run.thread_id,
-        order="asc"
-    )
-    
-    for message in messages.data:
-        if message.role == 'assistant':
-            for block in message.content:
-                if block.type == 'text':
-                    content = block.text.value  # get the text from the block
-                    try:
-                        logging.debug(f"assistant message: {content}")
-                        return content
-                    except Exception as e:
-                        logging.info(f"error assistant - not message :{e}")
+        # Wait for the run to complete
+        while run.status in ['queued', 'in_progress']:
+            time.sleep(1)  # Pause for a second before checking the status again
+            run = client.beta.threads.runs.retrieve(
+                thread_id=run.thread_id,#added
+                run_id=run.id
+            )
+
+        # Get the response text from the assistant
+        messages = client.beta.threads.messages.list(
+            thread_id=run.thread_id,
+            order="asc"
+        )
+        
+        for message in messages.data:
+            if message.role == 'assistant':
+                for block in message.content:
+                    if block.type == 'text':
+                        content = block.text.value  # get the text from the block
+                        try:
+                            logging.debug(f"assistant message: {content}")
+                            return content
+                        except Exception as e:
+                            logging.info(f"error assistant for message step- not message :{e}")
+                            return None
+    except Exception as e:
+     logging.info(f"error assistant - during the process:{e}")
+     return None
 
 
     #assistant_response = messages.data[-1].content
@@ -158,8 +185,13 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     #ass_result = assistant_request(content_csv, "asst_3nZCjLaXe06CvPR5L05gkGxk", "vs_cca6GF9kkzlu7XlHEg6yCYV5")
     if  assistant_id is not None and vector_store_id is not None:
         ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
-        logging.info(f"ass_result: {ass_result}")
+        if ass_result is None:
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response")
+        else:
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", ass_result)
+            logging.info(f"ass_result: {ass_result}")
     else:
+        update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id")
         logging.info("Failed to retrieve assistant details.")
     
     
