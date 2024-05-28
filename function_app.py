@@ -40,18 +40,8 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 #Asistant request 
 def assistant_request(csv_string, assistant_id, vector_store_id):
-    # Read CSV string into DataFrame
-    #csv_data = csv.DictReader(io.StringIO(csv_string))
     #openai 
     client  = OpenAI(api_key=openai_key)
-
-    # For demonstration, let's assume we want to summarize the data
-    # Convert DataFrame to a string in a readable format
-    #data_summary = csv_data.describe().to_string()
-    data_summary = StringIO(csv_string)
-
-    # Create the request content for the assistant
-    #content = f"Please summarize the following data:\n\n{data_summary}"
 
     content = csv_string
 
@@ -84,9 +74,21 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
         thread_id=run.thread_id,
         order="asc"
     )
+    
+    for message in messages.data:
+        if message.role == 'assistant':
+            for block in message.content:
+                if block.type == 'text':
+                    content = block.text.value  # get the text from the block
+                    try:
+                        logging.debug(f"assistant message: {content}")
+                        return content
+                    except Exception as e:
+                        logging.info(f"error assistant - not message :{e}")
 
-    assistant_response = messages.data[-1].content
-    return assistant_response
+
+    #assistant_response = messages.data[-1].content
+    #return assistant_response
 
 
 
