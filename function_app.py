@@ -93,15 +93,6 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
 
 #get content from storage table 
 def get_assistant_details(table_name, partition_key, row_key):
-    """
-    Retrieve the 'contentAnalysisCsv' field from the specified Azure Storage Table.
-
-    :param table_name: Name of the table.
-    :param partition_key: PartitionKey of the entity.
-    :param row_key: RowKey of the entity.
-    :param connection_string: Connection string for the Azure Storage account.
-    :return: The value of the 'contentAnalysisCsv' field or None if not found.
-    """
     try:
         # Create a TableServiceClient using the connection string
         service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
@@ -120,19 +111,10 @@ def get_assistant_details(table_name, partition_key, row_key):
         return assistant_id,vector_store_id
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
+        return None, None
 
 #get content from storage table 
 def get_content_Csv(table_name, partition_key, row_key):
-    """
-    Retrieve the 'contentAnalysisCsv' field from the specified Azure Storage Table.
-
-    :param table_name: Name of the table.
-    :param partition_key: PartitionKey of the entity.
-    :param row_key: RowKey of the entity.
-    :param connection_string: Connection string for the Azure Storage account.
-    :return: The value of the 'contentAnalysisCsv' field or None if not found.
-    """
     try:
         # Create a TableServiceClient using the connection string
         service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
@@ -170,8 +152,10 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     logging.info(f"storageTable: {storageTable},caseid: {caseid},clinicArea: {clinicArea}")
     assistant_id, vector_store_id = get_assistant_details("assistants", clinicArea, 1)
     #ass_result = assistant_request(content_csv, "asst_3nZCjLaXe06CvPR5L05gkGxk", "vs_cca6GF9kkzlu7XlHEg6yCYV5")
-    if assistant_id is not None:
+    if  assistant_id is not None and vector_store_id is not None:
         ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
         logging.info(f"ass_result: {ass_result}")
+    else:
+        logging.info("Failed to retrieve assistant details.")
     
     
