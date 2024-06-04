@@ -55,7 +55,7 @@ def filter_assistantResponse( assistantResponse):
         #chat request for content analysis 
         response = client.chat.completions.create(
                     model=openai_model,
-                    response_format={ "type": "json_object" },
+                    #response_format={ "type": "json_object" },
                     messages=[
                         {"role": "system", "content": mission},
                         {"role": "user", "content": "remove all paragraphs that Disability Percentage is 0%"}
