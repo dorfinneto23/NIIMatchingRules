@@ -49,7 +49,7 @@ def filter_assistantResponse( assistantResponse):
 
         # Remove matching paragraphs from data
         for match in matches:
-            assistantResponse = assistantResponse.replace(match, "")
+            assistantResponse = assistantResponse.replace(match[0], '')
         logging.info(f"filter_assistantResponse: filtered_data: {assistantResponse}")
         return assistantResponse
     except Exception as e:
