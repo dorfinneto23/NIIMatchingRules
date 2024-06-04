@@ -41,21 +41,17 @@ driver= '{ODBC Driver 18 for SQL Server}'
 def filter_assistantResponse( assistantResponse):
     
     try:
-        data = """
-        1. **Polycythemia Vera (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** The patient is under regular treatment with hydroxyurea and phlebotomy, with stable hemoglobin and hematocrit levels.   - **Regulation Reference:** Section 2, Subsection 2(b), Primary polycythemia without complaints, documented in the hematological registry and balanced by drug treatment or blood transfusions .2. **Lymphocytopenia (Page: 91)**   - **Disability Percentage:** 0%   - **Explanation:** Mild lymphocytopenia with monitoring and investigation of underlying causes.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.3. **Iron Deficiency (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** Chronic iron deficiency with mild to moderate symptoms, requiring intermittent treatment with iron supplements.   - **Regulation Reference:** Section 2, Subsection 1(b), Mild chronic anemia with intermittent treatment .4. **Low Ferritin (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** Chronic low ferritin levels requiring intermittent treatment with iron supplements.   - **Regulation Reference:** Section 2, Subsection 1(b), Mild chronic anemia with intermittent treatment .5. **Neutrophilia (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Mild to moderate neutrophilia requiring monitoring and further evaluation.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.6. **Macrocytosis (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Moderate macrocytosis requiring investigation of vitamin B12 or folate deficiency.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.7. **Hemolysis (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Hemolysis within reference range, requiring consultation with a treating physician.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.
-        """
-
         # Define pattern to match paragraphs starting with "{number}. **" and ending with ".{other number}. **"
-        pattern = r"\d+\..+?(\.\d+\..+?\. \*\*.+?)(?=\d+\..+?\. \*\*Disability Percentage: 0%\*\*)"
+        pattern = r"\*\*(.*?)\*\* \(Pages:.*?\)\n\s+- \*\*Disability Percentage:\*\* 0%\n(.*?)\n\n"
 
         # Find all matching paragraphs
-        matches = re.findall(pattern, data, re.DOTALL)
+        matches = re.findall(pattern, assistantResponse, re.DOTALL)
 
         # Remove matching paragraphs from data
         for match in matches:
-            data = data.replace(match, "")
-        logging.info(f"filter_assistantResponse: filtered_data: {data}")
-        return data
+            assistantResponse = assistantResponse.replace(match, "")
+        logging.info(f"filter_assistantResponse: filtered_data: {assistantResponse}")
+        return assistantResponse
     except Exception as e:
         logging.error(f"filter_assistantResponse: Error update case: {str(e)}")
         return {str(e)}    
