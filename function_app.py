@@ -51,14 +51,14 @@ driver= '{ODBC Driver 18 for SQL Server}'
 def filter_assistantResponse( assistantResponse):
     
     try:
-        mission = f"remove all paragraphs that Disability Percentage is 0% from the following:\n{assistantResponse}\n"
+        mission = f"Remove all paragraphs that have a Disability Percentage of 0% from the following text:\n{assistantResponse}\n"
         #chat request for content analysis 
         response = client.chat.completions.create(
                     model=openai_model,
                     #response_format={ "type": "json_object" },
                     messages=[
                         {"role": "system", "content": mission},
-                        {"role": "user", "content": "remove all paragraphs that Disability Percentage is 0%"}
+                        {"role": "user", "content": "Please provide the filtered text without paragraphs where Disability Percentage is 0%."}
                     ]
          )
         logging.info(f"Response from openai: {response.choices[0].message.content}")
