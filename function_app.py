@@ -15,6 +15,7 @@ from collections import defaultdict # in order for merge_csv_rows_by_diagnosis f
 from openai import OpenAI # in order to use openai asistant 
 import time  # Import the time module
 import openai
+import re # for removal disabilities 0% filter_assistantResponse
 
 
 # Azure Blob Storage connection string
@@ -40,18 +41,21 @@ driver= '{ODBC Driver 18 for SQL Server}'
 def filter_assistantResponse( assistantResponse):
     
     try:
-        # Split data into paragraphs based on numbering
-        paragraphs = assistantResponse.split('\n')
+        data = """
+        1. **Polycythemia Vera (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** The patient is under regular treatment with hydroxyurea and phlebotomy, with stable hemoglobin and hematocrit levels.   - **Regulation Reference:** Section 2, Subsection 2(b), Primary polycythemia without complaints, documented in the hematological registry and balanced by drug treatment or blood transfusions .2. **Lymphocytopenia (Page: 91)**   - **Disability Percentage:** 0%   - **Explanation:** Mild lymphocytopenia with monitoring and investigation of underlying causes.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.3. **Iron Deficiency (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** Chronic iron deficiency with mild to moderate symptoms, requiring intermittent treatment with iron supplements.   - **Regulation Reference:** Section 2, Subsection 1(b), Mild chronic anemia with intermittent treatment .4. **Low Ferritin (Pages: 194, 183, 91)**   - **Disability Percentage:** 10%   - **Explanation:** Chronic low ferritin levels requiring intermittent treatment with iron supplements.   - **Regulation Reference:** Section 2, Subsection 1(b), Mild chronic anemia with intermittent treatment .5. **Neutrophilia (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Mild to moderate neutrophilia requiring monitoring and further evaluation.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.6. **Macrocytosis (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Moderate macrocytosis requiring investigation of vitamin B12 or folate deficiency.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.7. **Hemolysis (Pages: 194, 183, 91)**   - **Disability Percentage:** 0%   - **Explanation:** Hemolysis within reference range, requiring consultation with a treating physician.   - **Regulation Reference:** Not explicitly listed in the provided regulations; typically, mild conditions without significant symptoms or treatment requirements are not assigned a disability percentage.
+        """
 
-        # Filter paragraphs where the disability percentage is not 0%
-        filtered_paragraphs = [paragraph for paragraph in paragraphs if "**Disability Percentage:** 0%" not in paragraph]
+        # Define pattern to match paragraphs starting with "{number}. **" and ending with ".{other number}. **"
+        pattern = r"\d+\..+?(\.\d+\..+?\. \*\*.+?)(?=\d+\..+?\. \*\*Disability Percentage: 0%\*\*)"
 
-        # Join the filtered paragraphs back into a single string
-        filtered_data = '\n'.join(filtered_paragraphs)
+        # Find all matching paragraphs
+        matches = re.findall(pattern, data, re.DOTALL)
 
-        print(filtered_data)
-        logging.info(f"filter_assistantResponse: filtered_data: {filtered_data}")
-        return filtered_data
+        # Remove matching paragraphs from data
+        for match in matches:
+            data = data.replace(match, "")
+        logging.info(f"filter_assistantResponse: filtered_data: {data}")
+        return data
     except Exception as e:
         logging.error(f"filter_assistantResponse: Error update case: {str(e)}")
         return {str(e)}    
