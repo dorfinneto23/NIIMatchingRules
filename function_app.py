@@ -53,7 +53,7 @@ def filter_assistantResponse( assistantResponse):
     try:
         mission = mission = (
             f"Remove all paragraphs that have a disability percentage of 0% from the following text. "
-            f"If all provided entries have a disability percentage of 0%, then respond with: no disabilities found.:\n{assistant_response}\n"
+            f"If all provided entries have a disability percentage of 0%, then respond with: no disabilities found.:\n{assistantResponse}\n"
         )
         #chat request for content analysis 
         response = client.chat.completions.create(
