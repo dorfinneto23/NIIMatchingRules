@@ -24,8 +24,18 @@ connection_string_blob = os.environ.get('BlobStorageConnString')
 #Azure service bus connection string 
 connection_string_servicebus = os.environ.get('servicebusConnectionString')
 
-#openai key
+#Assistant openai key
 openai_key = os.environ.get('openai_key')
+
+
+#OpenAI Details 
+client = AzureOpenAI(
+  api_key = os.environ.get('AzureOpenAI_pi_key'),
+  api_version = "2024-02-01",
+  azure_endpoint = "https://openaisponsorship.openai.azure.com/"
+)
+
+openai_model = "ProofitGPT4o"
 
 
 # Define connection details
@@ -41,20 +51,21 @@ driver= '{ODBC Driver 18 for SQL Server}'
 def filter_assistantResponse( assistantResponse):
     
     try:
-        # Define pattern to match paragraphs starting with "{number}. **" and ending with ".{other number}. **"
-        pattern = r"\*\*(.*?)\*\* \(Pages:.*?\)\n\s+- \*\*Disability Percentage:\*\* 0%\n(.*?)\n\n"
-
-        # Find all matching paragraphs
-        matches = re.findall(pattern, assistantResponse, re.DOTALL)
-
-        # Remove matching paragraphs from data
-        for match in matches:
-            assistantResponse = assistantResponse.replace(match[0], '')
-        logging.info(f"filter_assistantResponse: filtered_data: {assistantResponse}")
-        return assistantResponse
+        mission = f"remove all paragraphs that Disability Percentage is 0% from the following:\n{assistantResponse}\n"
+        #chat request for content analysis 
+        response = client.chat.completions.create(
+                    model=openai_model,
+                    response_format={ "type": "json_object" },
+                    messages=[
+                        {"role": "system", "content": mission},
+                        {"role": "user", "content": "remove all paragraphs that Disability Percentage is 0%"}
+                    ]
+         )
+        logging.info(f"Response from openai: {response.choices[0].message.content}")
+        result = response.choices[0].message.content.lower()
+        return result
     except Exception as e:
-        logging.error(f"filter_assistantResponse: Error update case: {str(e)}")
-        return {str(e)}    
+        return f"{str(e)}"  
     
 
 
