@@ -36,6 +36,27 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 
 
+#  Function filers paragraphs where the disability percentage is not 0%
+def filter_assistantResponse( assistantResponse):
+    
+    try:
+        # Split data into paragraphs based on numbering
+        paragraphs = assistantResponse.split('\n')
+
+        # Filter paragraphs where the disability percentage is not 0%
+        filtered_paragraphs = [paragraph for paragraph in paragraphs if "**Disability Percentage:** 0%" not in paragraph]
+
+        # Join the filtered paragraphs back into a single string
+        filtered_data = '\n'.join(filtered_paragraphs)
+
+        print(filtered_data)
+        logging.info(f"filter_assistantResponse: filtered_data: {filtered_data}")
+        return filtered_data
+    except Exception as e:
+        logging.error(f"filter_assistantResponse: Error update case: {str(e)}")
+        return {str(e)}    
+    
+
 
 # Generic Function to update case  in the 'cases' table
 def update_case_generic(caseid,field,value,field2,value2):
@@ -99,7 +120,7 @@ def count_rows_status_done ( table_name,partition_key):
         return 0    
 
 # Update field on specific entity/ row in storage table 
-def update_entity_field(table_name, partition_key, row_key, field_name, new_value,field_name2, new_value2):
+def update_entity_field(table_name, partition_key, row_key, field_name, new_value,field_name2, new_value2,field_name3, new_value3):
 
     try:
         # Create a TableServiceClient using the connection string
@@ -114,6 +135,7 @@ def update_entity_field(table_name, partition_key, row_key, field_name, new_valu
         # Update the field
         entity[field_name] = new_value
         entity[field_name2] = new_value2
+        entity[field_name3] = new_value3
 
         # Update the entity in the table
         table_client.update_entity(entity, mode=UpdateMode.REPLACE)
@@ -246,14 +268,14 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     logging.info(f"storageTable: {storageTable},caseid: {caseid},clinicArea: {clinicArea}")
     assistant_id, vector_store_id = get_assistant_details("assistants", clinicArea, "1")
     logging.info(f"main function assistant_id: {assistant_id},vector_store_id: {vector_store_id}")
-    #ass_result = assistant_request(content_csv, "asst_3nZCjLaXe06CvPR5L05gkGxk", "vs_cca6GF9kkzlu7XlHEg6yCYV5")
     if  assistant_id is not None and vector_store_id is not None:
         ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
         if ass_result is None:
-            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7)
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response")
             updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
-            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", ass_result,"status",6)
+            ass_result_filtered = filter_assistantResponse(ass_result)
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", ass_result,"status",6,"assistantResponsefiltered",ass_result_filtered)
             totalRows = count_rows_in_partition(storageTable,caseid)
             totalTerminationRows = count_rows_status_done(storageTable,caseid)
             #if all clinic areas passed via assistant without errors , update case to done 
@@ -261,7 +283,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
                 updateCaseResult = update_case_generic(caseid,"status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
             logging.info(f"ass_result: {ass_result}")
     else:
-        update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7)
+        update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id")
         updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         logging.info("Failed to retrieve assistant details.")
     
