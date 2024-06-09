@@ -47,6 +47,23 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 
 
+# get content csv from azure storage 
+def get_contentcsv_from_storage(path):
+    try:
+        logging.info(f"get_contentcsv function strating, path value: {path}")
+        container_name = "medicalanalysis"
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
+        container_client = blob_service_client.get_container_client(container_name)
+        blob_client = container_client.get_blob_client(path)
+        download_stream = blob_client.download_blob()
+        filecontent  = download_stream.read().decode('utf-8')
+        logging.info(f"get_contentcsv: data from the txt file is {filecontent}")
+        retrieved_csv = filecontent.replace('\\n', '\n') 
+        return retrieved_csv
+    except Exception as e:
+        logging.error(f"get_contentcsv: Error update case: {str(e)}")
+        return None    
+
 #  Function filers paragraphs where the disability percentage is not 0%
 def filter_assistantResponse( assistantResponse):
     
@@ -242,8 +259,8 @@ def get_assistant_details(table_name, partition_key, row_key):
         print(f"An error occurred: {e}")
         return None, None
 
-#get content from storage table 
-def get_content_Csv(table_name, partition_key, row_key):
+#get content csv path from storage table 
+def get_content_Csv_path(table_name, partition_key, row_key):
     try:
         # Create a TableServiceClient using the connection string
         service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
@@ -255,10 +272,9 @@ def get_content_Csv(table_name, partition_key, row_key):
         entity = table_client.get_entity(partition_key=partition_key, row_key=row_key)
 
         # Return the value of 'contentAnalysisCsv' field
-        encoded_content_csv = entity.get('contentCsvConsolidation')
-        retrieved_csv = encoded_content_csv.replace('\\n', '\n') 
-        logging.info(f"contentCsvConsolidation: {retrieved_csv}")
-        return retrieved_csv
+        content_csv_path = entity.get('contentCsvConsolidation')
+        logging.info(f"content_csv_path: {content_csv_path}")
+        return content_csv_path
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
@@ -277,7 +293,8 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     caseid = message_data_dict['caseid']
     clinicArea = message_data_dict['clinicArea']
     storageTable = message_data_dict['storageTable']
-    content_csv = get_content_Csv(storageTable, caseid, clinicArea)
+    content_csv_path = get_content_Csv_path(storageTable, caseid, clinicArea)
+    content_csv = get_contentcsv_from_storage(content_csv_path)
     logging.info(f"storageTable: {storageTable},caseid: {caseid},clinicArea: {clinicArea}")
     assistant_id, vector_store_id = get_assistant_details("assistants", clinicArea, "1")
     logging.info(f"main function assistant_id: {assistant_id},vector_store_id: {vector_store_id}")
