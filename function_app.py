@@ -47,6 +47,25 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 
 
+#save assistantResponse content 
+def save_assistantResponse(content,caseid,folder,filename):
+    try:
+        logging.info(f"save_ContentByClinicAreas start, content: {content},caseid: {caseid},filename: {filename}")
+        container_name = "medicalanalysis"
+        main_folder_name = "cases"
+        folder_name="case-"+caseid
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
+        container_client = blob_service_client.get_container_client(container_name)
+        basicPath = f"{main_folder_name}/{folder_name}"
+        destinationPath = f"{basicPath}/{folder}/{filename}"
+        # Upload the blob and overwrite if it already exists
+        blob_client = container_client.upload_blob(name=destinationPath, data=content, overwrite=True)
+        logging.info(f"the ContentByClinicAreas content file url is: {blob_client.url}")
+        return destinationPath
+    
+    except Exception as e:
+        print("An error occurred:", str(e))
+
 # get content csv from azure storage 
 def get_contentcsv_from_storage(path):
     try:
@@ -305,7 +324,10 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
             ass_result_filtered = filter_assistantResponse(ass_result)
-            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", ass_result,"status",6,"assistantResponsefiltered",ass_result_filtered)
+            filename = f"{clinicArea}.txt"
+            assistantResponse_path = save_assistantResponse(ass_result,caseid,"assistantResponse",filename)
+            assistantResponsefiltered_path = save_assistantResponse(ass_result_filtered,caseid,"assistantResponse/ass_result_filtered",filename)
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", assistantResponse_path,"status",6,"assistantResponsefiltered",assistantResponsefiltered_path)
             totalRows = count_rows_in_partition(storageTable,caseid)
             totalTerminationRows = count_rows_status_done(storageTable,caseid)
             #if all clinic areas passed via assistant without errors , update case to done 
