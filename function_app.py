@@ -298,7 +298,26 @@ def get_content_Csv_path(table_name, partition_key, row_key):
         print(f"An error occurred: {e}")
         return None
     
+#Create event on azure service bus 
+def create_servicebus_event(queue_name, event_data):
+    try:
+        # Create a ServiceBusClient using the connection string
+        servicebus_client = ServiceBusClient.from_connection_string(connection_string_servicebus)
 
+        # Create a sender for the queue
+        sender = servicebus_client.get_queue_sender(queue_name)
+
+        with sender:
+            # Create a ServiceBusMessage object with the event data
+            message = ServiceBusMessage(event_data)
+
+            # Send the message to the queue
+            sender.send_messages(message)
+
+        logging.info("create_servicebus_event:Event created successfully.")
+    
+    except Exception as e:
+        logging.error(f"create_servicebus_event:An error occurred:, {str(e)}")
 
 
 app = func.FunctionApp()
@@ -333,6 +352,12 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             #if all clinic areas passed via assistant without errors , update case to done 
             if totalRows==totalTerminationRows: 
                 updateCaseResult = update_case_generic(caseid,"status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
+                #preparing data for service bus
+                data = { 
+                        "caseid" :caseid
+                    } 
+                json_data = json.dumps(data)
+                create_servicebus_event("final-report-process", json_data) #send event to service bus
             logging.info(f"ass_result: {ass_result}")
     else:
         update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id")
