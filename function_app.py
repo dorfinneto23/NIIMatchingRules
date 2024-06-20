@@ -101,7 +101,9 @@ def filter_assistantResponse( assistantResponse):
          )
         logging.info(f"Response from openai: {response.choices[0].message.content}")
         result = response.choices[0].message.content.lower()
-        return result
+        #cleaning not relevant signs in the text
+        result_clean = result.replace("{", "").replace("}", "")
+        return result_clean
     except Exception as e:
         return f"{str(e)}"  
     
