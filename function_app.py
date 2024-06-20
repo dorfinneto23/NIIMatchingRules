@@ -115,7 +115,7 @@ def filter_assistantResponse_v2(assistantResponse):
         pattern = r'\{[^}]*\}'
         
         # Find all blocks
-        blocks = re.findall(pattern, input_text)
+        blocks = re.findall(pattern, assistantResponse)
         
         # Filter out blocks where **Disability Percentage** is 0%
         filtered_blocks = [
