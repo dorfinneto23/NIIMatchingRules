@@ -83,7 +83,7 @@ def get_contentcsv_from_storage(path):
         logging.error(f"get_contentcsv: Error update case: {str(e)}")
         return None    
 
-#  Function filers paragraphs where the disability percentage is not 0%
+#  Function filers paragraphs where the disability percentage is not 0% by openai 
 def filter_assistantResponse( assistantResponse):
     
     try:
@@ -107,7 +107,29 @@ def filter_assistantResponse( assistantResponse):
     except Exception as e:
         return f"{str(e)}"  
     
-
+#  Function filers paragraphs where the disability percentage is not 0% by pattern
+def filter_assistantResponse_v2(assistantResponse):
+    
+    try:
+        # Regex pattern to match the blocks
+        pattern = r'\{[^}]*\}'
+        
+        # Find all blocks
+        blocks = re.findall(pattern, input_text)
+        
+        # Filter out blocks where **Disability Percentage** is 0%
+        filtered_blocks = [
+            block for block in blocks 
+            if '**Disability Percentage:** 0%' not in block
+        ]
+        
+        # Join the filtered blocks into a single string
+        result = ''.join(filtered_blocks)
+        #cleaning not relevant signs in the text
+        result_clean = result.replace("{", "").replace("}", "")
+        return result_clean
+    except Exception as e:
+        return f"{str(e)}"  
 
 # Generic Function to update case  in the 'cases' table
 def update_case_generic(caseid,field,value,field2,value2):
@@ -344,7 +366,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response")
             updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
-            ass_result_filtered = filter_assistantResponse(ass_result)
+            ass_result_filtered = filter_assistantResponse_v2(ass_result)
             filename = f"{clinicArea}.txt"
             assistantResponse_path = save_assistantResponse(ass_result,caseid,"assistantResponse",filename)
             assistantResponsefiltered_path = save_assistantResponse(ass_result_filtered,caseid,"assistantResponse/ass_result_filtered",filename)
