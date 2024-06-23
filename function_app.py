@@ -28,16 +28,6 @@ connection_string_servicebus = os.environ.get('servicebusConnectionString')
 openai_key = os.environ.get('openai_key')
 
 
-#OpenAI Details 
-client = AzureOpenAI(
-  api_key = os.environ.get('AzureOpenAI_pi_key'),
-  api_version = "2024-02-01",
-  azure_endpoint = "https://openaisponsorship.openai.azure.com/"
-)
-
-openai_model = "ProofitGPT4o"
-
-
 # Define connection details
 server = 'medicalanalysis-sqlserver.database.windows.net'
 database = 'medicalanalysis'
@@ -83,29 +73,6 @@ def get_contentcsv_from_storage(path):
         logging.error(f"get_contentcsv: Error update case: {str(e)}")
         return None    
 
-#  Function filers paragraphs where the disability percentage is not 0% by openai 
-def filter_assistantResponse( assistantResponse):
-    
-    try:
-        mission = mission = (
-            f"Remove all paragraphs that have a disability percentage of 0% from the following text. "
-            f"If all provided entries have a disability percentage of 0%, then respond with: no disabilities found.:\n{assistantResponse}\n"
-        )
-        #chat request for content analysis 
-        response = client.chat.completions.create(
-                    model=openai_model,
-                    messages=[
-                        {"role": "system", "content": mission},
-                        {"role": "user", "content": "Please provide the filtered text without paragraphs where Disability Percentage is 0%."}
-                    ]
-         )
-        logging.info(f"Response from openai: {response.choices[0].message.content}")
-        result = response.choices[0].message.content.lower()
-        #cleaning not relevant signs in the text
-        result_clean = result.replace("{", "").replace("}", "")
-        return result_clean
-    except Exception as e:
-        return f"{str(e)}"  
     
 #  Function filers paragraphs where the disability percentage is not 0% by pattern
 def filter_assistantResponse_v2(assistantResponse):
