@@ -131,6 +131,31 @@ def filter_assistantResponse_v2(assistantResponse):
     except Exception as e:
         return f"{str(e)}"  
 
+#  Function filers paragraphs where the disability percentage is 0% by pattern
+def get_assistantResponse_no_Disabilities(assistantResponse):
+    try:
+        # Regex pattern to match the blocks
+        pattern = r'\{[^}]*\}'
+        
+        # Find all blocks
+        blocks = re.findall(pattern, assistantResponse)
+        
+        # Filter to keep only blocks where **Disability Percentage** is 0%
+        filtered_blocks = [
+            block for block in blocks 
+            if '**Disability Percentage:** 0%' in block
+        ]
+        
+        # Join the filtered blocks into a single string
+        result = ''.join(filtered_blocks)
+        
+        # Clean the text by removing curly braces
+        result_clean = result.replace("{", "").replace("}", "")
+        
+        return result_clean
+    except Exception as e:
+        return str(e)
+
 # Generic Function to update case  in the 'cases' table
 def update_case_generic(caseid,field,value,field2,value2):
     try:
@@ -193,7 +218,7 @@ def count_rows_status_done ( table_name,partition_key):
         return 0    
 
 # Update field on specific entity/ row in storage table 
-def update_entity_field(table_name, partition_key, row_key, field_name, new_value,field_name2, new_value2,field_name3, new_value3):
+def update_entity_field(table_name, partition_key, row_key, field_name, new_value,field_name2, new_value2,field_name3, new_value3,field_name4, new_value4):
 
     try:
         # Create a TableServiceClient using the connection string
@@ -209,6 +234,7 @@ def update_entity_field(table_name, partition_key, row_key, field_name, new_valu
         entity[field_name] = new_value
         entity[field_name2] = new_value2
         entity[field_name3] = new_value3
+        entity[field_name4] = new_value4
 
         # Update the entity in the table
         table_client.update_entity(entity, mode=UpdateMode.REPLACE)
@@ -363,14 +389,20 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     if  assistant_id is not None and vector_store_id is not None:
         ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
         if ass_result is None:
-            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response")
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response","assistantResponseNoDisabilities","no response")
             updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
-            ass_result_filtered = filter_assistantResponse_v2(ass_result)
             filename = f"{clinicArea}.txt"
+            #Save Full result
             assistantResponse_path = save_assistantResponse(ass_result,caseid,"assistantResponse",filename)
+            #save  records where Disabilities is not  0%
+            ass_result_filtered = filter_assistantResponse_v2(ass_result)
             assistantResponsefiltered_path = save_assistantResponse(ass_result_filtered,caseid,"assistantResponse/ass_result_filtered",filename)
-            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", assistantResponse_path,"status",6,"assistantResponsefiltered",assistantResponsefiltered_path)
+            #save  records where Disabilities is  0%
+            assistantResponseNoDisabilities = get_assistantResponse_no_Disabilities(ass_result)
+            NoDisabilities_path = save_assistantResponse(assistantResponseNoDisabilities,caseid,"assistantResponse/no_disabilities",filename)
+            #update record on storage table 
+            update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", assistantResponse_path,"status",6,"assistantResponsefiltered",assistantResponsefiltered_path,"assistantResponseNoDisabilities",NoDisabilities_path)
             totalRows = count_rows_in_partition(storageTable,caseid)
             totalTerminationRows = count_rows_status_done(storageTable,caseid)
             #if all clinic areas passed via assistant without errors , update case to done 
@@ -384,7 +416,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
                 create_servicebus_event("final-report-process", json_data) #send event to service bus
             logging.info(f"ass_result: {ass_result}")
     else:
-        update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id")
+        update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id","assistantResponseNoDisabilities","missing assistant_id or vector_store_id")
         updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         logging.info("Failed to retrieve assistant details.")
     
