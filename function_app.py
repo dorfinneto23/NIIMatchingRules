@@ -78,6 +78,7 @@ def get_contentcsv_from_storage(path):
 def filter_assistantResponse_v2(assistantResponse):
     
     try:
+        logging.info(f"filter_assistantResponse_v2: assistantResponse value: {assistantResponse}")
         # Regex pattern to match the blocks
         pattern = r'\{[^}]*\}'
         
@@ -93,7 +94,9 @@ def filter_assistantResponse_v2(assistantResponse):
         # Join the filtered blocks into a single string
         result = ''.join(filtered_blocks)
         #cleaning not relevant signs in the text
+        logging.info(f"filter_assistantResponse_v2: result value: {result}")
         result_clean = result.replace("{", "").replace("}", "")
+        logging.info(f"filter_assistantResponse_v2: result_clean value: {result_clean}")
         return result_clean
     except Exception as e:
         return f"{str(e)}"  
