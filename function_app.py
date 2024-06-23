@@ -92,7 +92,7 @@ def filter_assistantResponse_v2(assistantResponse):
         ]
         
         # Join the filtered blocks into a single string
-        result = ''.join(filtered_blocks)
+        result = '\n\n'.join(filtered_blocks)
         #cleaning not relevant signs in the text
         logging.info(f"filter_assistantResponse_v2: result value: {result}")
         result_clean = result.replace("{", "").replace("}", "")
@@ -117,7 +117,7 @@ def get_assistantResponse_no_Disabilities(assistantResponse):
         ]
         
         # Join the filtered blocks into a single string
-        result = ''.join(filtered_blocks)
+        result = '\n\n'.join(filtered_blocks)
         
         # Clean the text by removing curly braces
         result_clean = result.replace("{", "").replace("}", "")
