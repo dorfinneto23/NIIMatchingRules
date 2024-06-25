@@ -4,7 +4,6 @@ import os #in order to get parameters values from azure function app enviroment 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient # in order to use azure container storage
 import io # in order to download pdf to memory and write into memory without disk permission needed 
 import json # in order to use json 
-import pyodbc #for sql connections 
 from azure.servicebus import ServiceBusClient, ServiceBusMessage # in order to use azure service bus 
 from openai import AzureOpenAI #for using openai services 
 from azure.data.tables import TableServiceClient, TableClient, UpdateMode # in order to use azure storage table  
@@ -26,15 +25,6 @@ connection_string_servicebus = os.environ.get('servicebusConnectionString')
 
 #Assistant openai key
 openai_key = os.environ.get('openai_key')
-
-
-# Define connection details
-server = 'medicalanalysis-sqlserver.database.windows.net'
-database = 'medicalanalysis'
-username = os.environ.get('sql_username')
-password = os.environ.get('sql_password')
-driver= '{ODBC Driver 18 for SQL Server}'
-
 
 
 # Update field on specific entity/ row in storage table 
@@ -153,26 +143,6 @@ def get_assistantResponse_no_Disabilities(assistantResponse):
     except Exception as e:
         return str(e)
 
-# Generic Function to update case  in the 'cases' table
-def update_case_generic(caseid,field,value,field2,value2):
-    try:
-        # Establish a connection to the Azure SQL database
-        conn = pyodbc.connect('DRIVER='+driver+';SERVER='+server+';DATABASE='+database+';UID='+username+';PWD='+ password)
-        cursor = conn.cursor()
-
-        # update case
-        cursor.execute(f"UPDATE cases SET {field} = ?,{field2} = ? WHERE id = ?", (value,value2, caseid))
-        conn.commit()
-
-        # Close connections
-        cursor.close()
-        conn.close()
-        
-        logging.info(f"case {caseid} updated field name: {field} , value: {value} and field name: {field2} , value: {value2}")
-        return True
-    except Exception as e:
-        logging.error(f"Error update case: {str(e)}")
-        return False    
 
 #  Function check how many rows in partition of azure storage 
 def count_rows_in_partition( table_name,partition_key):
@@ -389,7 +359,6 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
         ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
         if ass_result is None:
             update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response","assistantResponseNoDisabilities","no response","clinicAreaLableName",lableName)
-            updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
             update_cases_entity_field("cases", caseid, "1", "status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
             filename = f"{clinicArea}.txt"
@@ -407,7 +376,6 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             totalTerminationRows = count_rows_status_done(storageTable,caseid)
             #if all clinic areas passed via assistant without errors , update case to done 
             if totalRows==totalTerminationRows: 
-                updateCaseResult = update_case_generic(caseid,"status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
                 update_cases_entity_field("cases", caseid, "1", "status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
                 #preparing data for service bus
                 data = { 
@@ -418,7 +386,6 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             logging.info(f"ass_result: {ass_result}")
     else:
         update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id","assistantResponseNoDisabilities","missing assistant_id or vector_store_id","clinicAreaLableName","missing")
-        updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         update_cases_entity_field("cases", caseid, "1", "status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         logging.info("Failed to retrieve assistant details.")
     
