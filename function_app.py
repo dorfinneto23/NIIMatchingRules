@@ -37,6 +37,33 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 
 
+# Update field on specific entity/ row in storage table 
+def update_cases_entity_field(table_name, partition_key, row_key, field_name, new_value,field_name2, new_value2):
+
+    try:
+        # Create a TableServiceClient using the connection string
+        table_service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
+
+        # Get a TableClient
+        table_client = table_service_client.get_table_client(table_name)
+
+        # Retrieve the entity
+        entity = table_client.get_entity(partition_key, row_key)
+
+        # Update the field
+        entity[field_name] = new_value
+        entity[field_name2] = new_value2
+
+        # Update the entity in the table
+        table_client.update_entity(entity, mode=UpdateMode.REPLACE)
+        logging.info(f"update_cases_entity_field:Entity updated successfully.")
+
+    except ResourceNotFoundError:
+        logging.info(f"The entity with PartitionKey '{partition_key}' and RowKey '{row_key}' was not found.")
+    except Exception as e:
+        logging.info(f"An error occurred: {e}")
+
+
 #save assistantResponse content 
 def save_assistantResponse(content,caseid,folder,filename):
     try:
@@ -363,6 +390,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
         if ass_result is None:
             update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response","assistantResponseNoDisabilities","no response","clinicAreaLableName",lableName)
             updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
+            update_cases_entity_field("cases", caseid, "1", "status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         else:
             filename = f"{clinicArea}.txt"
             #Save Full result
@@ -380,6 +408,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
             #if all clinic areas passed via assistant without errors , update case to done 
             if totalRows==totalTerminationRows: 
                 updateCaseResult = update_case_generic(caseid,"status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
+                update_cases_entity_field("cases", caseid, "1", "status",11,"niiMatchingRules",1) #update case status to 11  "NIIMatchingRules done"
                 #preparing data for service bus
                 data = { 
                         "caseid" :caseid
@@ -390,6 +419,7 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     else:
         update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "missing assistant_id or vector_store_id","status",7,"assistantResponsefiltered","missing assistant_id or vector_store_id","assistantResponseNoDisabilities","missing assistant_id or vector_store_id","clinicAreaLableName","missing")
         updateCaseResult = update_case_generic(caseid,"status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
+        update_cases_entity_field("cases", caseid, "1", "status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
         logging.info("Failed to retrieve assistant details.")
     
     
