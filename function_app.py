@@ -213,9 +213,59 @@ def update_entity_field(table_name, partition_key, row_key, field_name, new_valu
     except Exception as e:
         logging.info(f"An error occurred: {e}")
 
-#Asistant request 
+#Asistant request without vector_store_id
+def assistant_request_no_vectorid(csv_string, assistant_id):
+    try:
+        logging.info(f"assistant_request_no_vectorid start : {assistant_id}")
+        #openai 
+        client  = OpenAI(api_key=openai_key)
+
+        content = csv_string
+
+        # Run the assistant with create_and_run
+        run = client.beta.threads.create_and_run(
+            assistant_id=assistant_id,
+            tools=[{"type": "file_search"}],
+            thread={
+                "messages": [
+                    {"role": "user", "content": content},
+                ]
+            }
+        )
+
+        # Wait for the run to complete
+        while run.status in ['queued', 'in_progress']:
+            time.sleep(1)  # Pause for a second before checking the status again
+            run = client.beta.threads.runs.retrieve(
+                thread_id=run.thread_id,#added
+                run_id=run.id
+            )
+
+        # Get the response text from the assistant
+        messages = client.beta.threads.messages.list(
+            thread_id=run.thread_id,
+            order="asc"
+        )
+        
+        for message in messages.data:
+            if message.role == 'assistant':
+                for block in message.content:
+                    if block.type == 'text':
+                        content = block.text.value  # get the text from the block
+                        try:
+                            logging.debug(f"assistant message: {content}")
+                            return content
+                        except Exception as e:
+                            logging.info(f"error assistant for message step- not message :{e}")
+                            return None
+    except Exception as e:
+     logging.info(f"assistant_request_no_vectorid: error assistant - during the process:{e}")
+     return None
+    
+#Asistant request with vector_store_id
 def assistant_request(csv_string, assistant_id, vector_store_id):
     try:
+        logging.info(f"assistant_request start : {assistant_id},vector_store_id: {vector_store_id}")
         #openai 
         client  = OpenAI(api_key=openai_key)
 
@@ -263,14 +313,8 @@ def assistant_request(csv_string, assistant_id, vector_store_id):
                             logging.info(f"error assistant for message step- not message :{e}")
                             return None
     except Exception as e:
-     logging.info(f"error assistant - during the process:{e}")
+     logging.info(f"assistant_request: error - during the process:{e}")
      return None
-
-
-    #assistant_response = messages.data[-1].content
-    #return assistant_response
-
-
 
 
 #get content from storage table 
@@ -355,8 +399,13 @@ def NIIMatchingRules(azservicebus: func.ServiceBusMessage):
     logging.info(f"storageTable: {storageTable},caseid: {caseid},clinicArea: {clinicArea}")
     assistant_id, vector_store_id,lableName = get_assistant_details("assistants", clinicArea, "1")
     logging.info(f"main function assistant_id: {assistant_id},vector_store_id: {vector_store_id}")
-    if  assistant_id is not None and vector_store_id is not None:
-        ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
+    if  assistant_id is not None:
+        if vector_store_id is not None:
+           #run assistant with vector_store_id
+           ass_result = assistant_request(content_csv, assistant_id, vector_store_id)
+        else:
+           #run assistant without vector_store_id
+           ass_result = assistant_request_no_vectorid(content_csv, assistant_id)
         if ass_result is None:
             update_entity_field(storageTable, caseid, clinicArea, "assistantResponse", "no response","status",7,"assistantResponsefiltered","no response","assistantResponseNoDisabilities","no response","clinicAreaLableName",lableName)
             update_cases_entity_field("cases", caseid, "1", "status",12,"niiMatchingRules",0) #update case status to 12  "NIIMatchingRules faild "
